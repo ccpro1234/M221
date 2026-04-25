@@ -259,15 +259,17 @@ canvas { background: #050607; width: 100%; height: 240px; border-radius: 4px; bo
                 <div class="meta-confidence-bar">
                     <div id="confidence-fill" class="confidence-fill"></div>
                 </div>
-                <div id="ai-conf-text" style="font-size:16px; font-weight:bold; color:var(--gold);">Confidence: 0%</div>
+                <div id="ai-conf-text" style="font-size:16px; font-weight:bold; color:var(--gold);">AI มีความมั่นใจ 0%</div>
                 
                 <!-- History Badges moved here -->
                 <div id="history-badges" class="badge-container"></div>
             </div>
 
-            <div style="margin-top:20px;">
-                <canvas id="road" width="400" height="240"></canvas>
-            </div>
+          <div style="margin-top:20px;">
+    <div id="roadScroll" style="overflow-x:auto; width:100%;">
+        <canvas id="road" height="240"></canvas>
+    </div>
+</div>
 
             <div class="panel" style="margin-top:15px; background:rgba(0,0,0,0.3);">
                 <h4 style="margin:0 0 10px 0; color:var(--accent);">MONEY MANAGEMENT (เดินเงิน 5 ไม้)</h4>
@@ -459,7 +461,7 @@ function render() {
         sideEl.style.color = ai.side === 'P' ? 'var(--p)' : 'var(--b)';
         reasonEl.textContent = ai.conf > 70 ? "มั่นใจสูง แนะนำให้ตาม" : "ความมั่นใจปานกลาง โปรดระวัง";
         confFill.style.width = ai.conf + '%';
-        confText.textContent = `Confidence: ${ai.conf.toFixed(1)}%`;
+        confText.textContent = `AI มีความมั่นใจ ${ai.conf.toFixed(1)}%`;
     } else {
         sideEl.textContent = "WAIT";
         sideEl.style.color = "var(--muted)";
@@ -503,23 +505,102 @@ function render() {
 function drawRoad() {
     const canvas = document.getElementById('road');
     const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const scroll = document.getElementById('roadScroll');
+
     const size = 18;
     const gap = 4;
+
     let x = 0, y = 0;
     let lastV = null;
+
+    // หาความกว้างจริงก่อน
     history.forEach(v => {
+
         if (v === 'T') return;
-        if (v !== lastV && lastV !== null) { x++; y = 0; } else if (lastV !== null) { y++; }
-        if (y >= ROWS) { y = 0; x++; }
-        ctx.beginPath();
-        ctx.arc(x * (size + gap) + size/2 + 10, y * (size + gap) + size/2 + 10, size/2, 0, Math.PI * 2);
-        ctx.strokeStyle = v === 'P' ? '#33b5ff' : '#ff6b6b';
-        ctx.lineWidth = 3;
-        ctx.stroke();
-        lastV = v;
+
+        if (v !== lastV && lastV !== null){
+            x++;
+            y=0;
+        }
+        else if(lastV !== null){
+            y++;
+        }
+
+        if(y >= ROWS){
+            y=0;
+            x++;
+        }
+
+        lastV=v;
     });
+
+    const totalCols = x + 2;
+
+    canvas.width = Math.max(
+        totalCols*(size+gap)+20,
+        scroll.clientWidth
+    );
+
+    canvas.height = 240;
+
+    ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    // วาดจริง
+    x=0;
+    y=0;
+    lastV=null;
+
+    history.forEach(v=>{
+
+        if(v==='T') return;
+
+        if(v!==lastV && lastV!==null){
+            x++;
+            y=0;
+        }
+        else if(lastV!==null){
+            y++;
+        }
+
+        if(y>=ROWS){
+            y=0;
+            x++;
+        }
+
+        ctx.beginPath();
+
+        ctx.arc(
+            x*(size+gap)+size/2+10,
+            y*(size+gap)+size/2+10,
+            size/2,
+            0,
+            Math.PI*2
+        );
+
+        ctx.strokeStyle=
+            v==='P'
+            ? '#33b5ff'
+            : '#ff6b6b';
+
+        ctx.lineWidth=3;
+        ctx.stroke();
+
+        lastV=v;
+
+    });
+
+    // auto scroll ไปขวาสุด
+    requestAnimationFrame(()=>{
+        scroll.scrollLeft = scroll.scrollWidth;
+    });
+
 }
+
 
 if (new Date() > EXPIRE_DATE) {
     document.body.innerHTML = "<h1 style='color:white; text-align:center; margin-top:100px;'>โปรแกรมหมดอายุแล้ว</h1>";
